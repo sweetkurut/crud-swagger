@@ -4,30 +4,27 @@ import {
   Get,
   Post,
   Body,
-  Patch,
+  UsePipes,
+  ValidationPipe,
   Param,
-  Delete,
-  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  async create(@Body() createUserDto: CreateUserDto, @Req() req) {
+  @UsePipes(new ValidationPipe())
+  async create(@Body() createUserDto: CreateUserDto) {
     try {
-      await this.usersService.create(createUserDto);
+      const user = await this.usersService.create(createUserDto);
 
-      return {
-        message: 'User created successfully',
-      };
+      return user;
     } catch (error) {
       return {
-        message: error.message,
+        error: error.message,
       };
     }
   }
@@ -37,18 +34,8 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @Get(':email')
+  findOne(@Param('email') email: string) {
+    return this.usersService.findOne(email);
   }
 }

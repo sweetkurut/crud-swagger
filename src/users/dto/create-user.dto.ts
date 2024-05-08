@@ -1,13 +1,12 @@
 /* eslint-disable prettier/prettier */
-import { IsNotEmpty } from 'class-validator';
+
+import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
 
 export class CreateUserDto {
-  id: number;
-
-  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
-  // first_name: string;
-  // last_name: string;
+  @IsNotEmpty()
+  @MinLength(6, { message: 'Password must be more then 6 symbols' })
   password: string;
 }

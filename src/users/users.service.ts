@@ -1,29 +1,39 @@
 /* eslint-disable prettier/prettier */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as argon2 from 'argon2';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const isExist = await this.userRepository.findBy({
-      // id,
-      email: createUserDto.email,
+  async create(createUserDto: CreateUserDto) {
+    // проверка на наличие существующего юзера
+    const isExist = await this.userRepository.findOne({
+      where: {
+        email: createUserDto.email,
+      },
     });
 
-    if (isExist.length) throw new BadRequestException('User already exist');
+    if (isExist) throw new BadRequestException('User already exist');
 
-    const user = await this.userRepository.create(createUserDto);
+    // создание нового
+    const user = await this.userRepository.save({
+      email: createUserDto.email,
+      password: await argon2.hash(createUserDto.password),
+    });
 
-    return this.userRepository.save(user);
+    const token = this.jwtService.sign({ email: createUserDto.email });
+
+    return { user, token };
   }
 
   async findAll() {
@@ -31,19 +41,15 @@ export class UsersService {
     return user;
   }
 
-  async findOne(id: number) {
-    const user = await this.userRepository.findOneBy({ id });
+  async findOne(email: string) {
+    const emailUser = await this.userRepository.findOne({
+      where: {
+        email,
+      },
+    });
 
-    if (!user) throw new BadRequestException('User not found');
+    if (!emailUser) throw new BadRequestException('User not found');
 
-    return user;
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    return emailUser;
   }
 }
