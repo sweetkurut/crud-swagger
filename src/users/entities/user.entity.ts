@@ -1,14 +1,18 @@
 /* eslint-disable prettier/prettier */
+import { UserRole } from 'src/user-role/entities/user-role.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn({ name: 'user_id' })
+  @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
@@ -20,6 +24,10 @@ export class User {
   @CreateDateColumn()
   createdAt: Date;
 
-  @CreateDateColumn()
+  @UpdateDateColumn()
   updatedAt: Date;
+
+  @ManyToOne(() => UserRole, { eager: true, nullable: true, cascade: true })
+  @JoinColumn()
+  roles: UserRole;
 }

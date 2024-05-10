@@ -7,26 +7,28 @@ import {
   UsePipes,
   ValidationPipe,
   Param,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { HasRoles } from 'src/auth/roles.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { UserRoleName } from 'src/user-role/user-role.type';
+import { LocalAuthGuard } from 'src/auth/guards/auth.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @UsePipes(new ValidationPipe())
   async create(@Body() createUserDto: CreateUserDto) {
-    try {
-      const user = await this.usersService.create(createUserDto);
+    return await this.usersService.createUser(createUserDto);
+  }
 
-      return user;
-    } catch (error) {
-      return {
-        error: error.message,
-      };
-    }
+  @Get('admin')
+  @HasRoles(UserRoleName.ADMIN)
+  async adminOnlyEndpoint() {
+    return 'Welcome admin';
   }
 
   @Get()

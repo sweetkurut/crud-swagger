@@ -1,11 +1,17 @@
 /* eslint-disable prettier/prettier */
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
+import { UserRoleService } from 'src/user-role/user-role.service';
 
 @Injectable()
 export class UsersService {
@@ -13,31 +19,60 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly userRoleService: UserRoleService,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    // проверка на наличие существующего юзера
-    const isExist = await this.userRepository.findOne({
-      where: {
-        email: createUserDto.email,
-      },
-    });
+  async createUser(createUserDto: CreateUserDto) {
+    try {
+      const isExist = await this.userRepository.findOne({
+        where: {
+          email: createUserDto.email,
+        },
+      });
 
-    if (isExist) throw new BadRequestException('User already exist');
+      if (isExist) {
+        throw new HttpException('User already exists', HttpStatus.BAD_REQUEST);
+      }
 
-    // создание нового
-    const user = await this.userRepository.save({
-      email: createUserDto.email,
-      password: await argon2.hash(createUserDto.password),
-    });
+      const userRole = await this.userRoleService.findRoleByRoleName(
+        createUserDto.roles,
+      );
 
-    const token = this.jwtService.sign({ email: createUserDto.email });
+      if (!userRole) {
+        throw new HttpException(
+          'User role does not exist',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
 
-    return { user, token };
+      const newUser = new User();
+      newUser.email = createUserDto.email;
+      newUser.password = await argon2.hash(createUserDto.password);
+      newUser.roles = userRole;
+
+      await this.userRepository.save(newUser);
+      const token = this.jwtService.sign({ email: createUserDto.email });
+      return { newUser, token };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Internal server error',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private isUserAdmin() {
+    const admin = this.userRepository.find();
+    return admin;
+  }
+
+  async getAdminProfile() {
+    const admin = await this.userRepository.find();
+    return admin;
   }
 
   async findAll() {
-    const user = await this.userRepository.find();
+    const user = await this.userRepository.find({ relations: ['roles'] });
     return user;
   }
 
@@ -46,6 +81,7 @@ export class UsersService {
       where: {
         email,
       },
+      relations: ['roles'],
     });
 
     if (!emailUser) throw new BadRequestException('User not found');

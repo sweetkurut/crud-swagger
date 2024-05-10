@@ -1,6 +1,8 @@
 /* eslint-disable prettier/prettier */
 
-import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { UserRole } from 'src/user-role/entities/user-role.entity';
+import { UserRoleName } from 'src/user-role/user-role.type';
 
 export class CreateUserDto {
   @IsEmail()
@@ -9,4 +11,7 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(6, { message: 'Password must be more then 6 symbols' })
   password: string;
+
+  @IsArray()
+  roles: UserRoleName;
 }

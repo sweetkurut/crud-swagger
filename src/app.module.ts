@@ -6,16 +6,14 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { config } from 'dotenv';
-import { User } from './users/entities/user.entity';
+// import { User } from './users/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
+import { UserRoleModule } from './user-role/user-role.module';
 
 config();
 
 @Module({
   imports: [
-    UsersModule,
-    AuthModule,
-
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -25,12 +23,15 @@ config();
         password: configService.get('DATABASE_PASSWORD'),
         username: configService.get('DATABASE_USERNAME'),
         database: configService.get('DATABASE'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
         logging: true,
-        entities: [User], 
-      }), 
+      }),
       inject: [ConfigService],
     }),
+    UsersModule,
+    AuthModule,
+    UserRoleModule,
   ],
 
   controllers: [AppController],
